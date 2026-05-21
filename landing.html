@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LupiAI — Pare de perder dinheiro no estoque</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #04080f;
+  --surface: #0a1020;
+  --surface2: #0f1829;
+  --border: rgba(255,255,255,0.07);
+  --accent: #3b82f6;
+  --accent2: #60a5fa;
+  --green: #10b981;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --text: #e2e8f0;
+  --text2: #64748b;
+  --text3: #1e293b;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── NOISE TEXTURE ── */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:0; opacity:0.4;
+}
+
+/* ── URGENCY BAR ── */
+.urgency-bar {
+  background: linear-gradient(90deg, #dc2626, #ef4444);
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  position: relative; z-index: 100;
+  animation: pulse-bar 2s ease-in-out infinite;
+}
+@keyframes pulse-bar {
+  0%,100% { opacity:1; }
+  50% { opacity:0.85; }
+}
+
+/* ── NAV ── */
+nav {
+  position: sticky; top: 0; z-index: 90;
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(4,8,15,0.92);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Syne', sans-serif;
+  font-size: 1.2rem; font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.nav-logo-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: rgba(59,130,246,0.15);
+  border: 1px solid rgba(59,130,246,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.nav-cta {
+  background: var(--accent);
+  color: #fff; border: none;
+  padding: 9px 20px; border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.82rem; font-weight: 700;
+  cursor: pointer; text-decoration: none;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.nav-cta:hover { background: #2563eb; transform: translateY(-1px); }
+
+/* ── HERO ── */
+.hero {
+  position: relative; z-index: 1;
+  min-height: 100svh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 60px 20px 40px;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* Background glow */
+.hero::before {
+  content:'';
+  position:absolute;
+  top:-200px; left:50%; transform:translateX(-50%);
+  width:700px; height:700px;
+  background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+  pointer-events:none;
+}
+.hero::after {
+  content:'';
+  position:absolute;
+  bottom:-100px; left:10%;
+  width:400px; height:400px;
+  background: radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%);
+  pointer-events:none;
+}
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.3);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.75rem; font-weight: 600;
+  color: var(--accent2);
+  margin-bottom: 24px;
+  animation: fadeUp 0.6s ease both;
+}
+
+.hero-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(2.2rem, 8vw, 4rem);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  margin-bottom: 20px;
+  animation: fadeUp 0.6s ease 0.1s both;
+}
+.hero-title span {
+  background: linear-gradient(135deg, #3b82f6, #10b981);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.hero-sub {
+  font-size: clamp(0.95rem, 3vw, 1.1rem);
+  color: var(--text2);
+  line-height: 1.7;
+  max-width: 520px;
+  margin: 0 auto 32px;
+  animation: fadeUp 0.6s ease 0.2s both;
+}
+.hero-sub strong { color: var(--text); }
+
+.hero-btns {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  width: 100%; max-width: 360px; margin: 0 auto 40px;
+  animation: fadeUp 0.6s ease 0.3s both;
+}
+
+.btn-primary {
+  width: 100%; padding: 16px 24px;
+  background: var(--accent);
+  border: none; border-radius: 12px;
+  color: #fff; font-family: 'Outfit', sans-serif;
+  font-size: 1rem; font-weight: 700;
+  cursor: pointer; text-decoration: none;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 0 30px rgba(59,130,246,0.3);
+}
+.btn-primary:hover { background: #2563eb; transform: translateY(-2px); box-shadow: 0 0 40px rgba(59,130,246,0.4); }
+
+.vagas-bar {
+  width: 100%;
+  background: var(--surface2);
+  border-radius: 8px;
+  overflow: hidden;
+  height: 6px;
+}
+.vagas-fill {
+  height: 100%; width: 73%;
+  background: linear-gradient(90deg, var(--accent), var(--green));
+  border-radius: 8px;
+  animation: grow 1.5s ease 0.8s both;
+}
+@keyframes grow { from { width:0; } }
+.vagas-label {
+  font-size: 0.72rem; color: var(--text2); text-align: center; margin-top: 6px;
+}
+
+/* ── VIDEO ── */
+.video-section {
+  padding: 20px 20px 60px;
+  display: flex; justify-content: center;
+  position: relative; z-index: 1;
+  animation: fadeUp 0.6s ease 0.4s both;
+}
+
+.video-wrapper {
+  position: relative;
+  width: 100%; max-width: 600px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,130,246,0.1);
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.video-wrapper:hover { transform: scale(1.02); box-shadow: 0 50px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(59,130,246,0.25); }
+
+.video-thumb {
+  width: 100%; display: block;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  background: var(--surface2);
+}
+
+.video-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(4,8,15,0.45);
+}
+.play-btn {
+  width: 64px; height: 64px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.2s, background 0.2s;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.video-wrapper:hover .play-btn { transform: scale(1.1); background: #fff; }
+.play-btn svg { width: 24px; height: 24px; margin-left: 3px; }
+
+.video-label {
+  position: absolute; bottom: 16px; left: 16px;
+  background: rgba(4,8,15,0.85);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.75rem; font-weight: 600; color: var(--text2);
+}
+
+/* ── SOCIAL PROOF NUMBERS ── */
+.numbers-section {
+  padding: 20px 20px 60px;
+  position: relative; z-index: 1;
+}
+.numbers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.number-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 12px;
+  text-align: center;
+}
+.number-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.7rem; font-weight: 900;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, var(--accent2), var(--green));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  display: block; margin-bottom: 4px;
+}
+.number-label { font-size: 0.72rem; color: var(--text2); line-height: 1.4; }
+
+/* ── DOR ── */
+.dor-section {
+  padding: 60px 20px;
+  position: relative; z-index: 1;
+  background: linear-gradient(180deg, transparent, rgba(239,68,68,0.03), transparent);
+}
+.section-badge {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 0.72rem; font-weight: 600;
+  color: var(--text2); letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(1.6rem, 6vw, 2.4rem);
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin-bottom: 10px;
+}
+.section-title span { color: var(--accent2); }
+.section-sub {
+  font-size: 0.9rem; color: var(--text2); line-height: 1.7;
+  max-width: 480px; margin-bottom: 32px;
+}
+
+.dor-list { display: flex; flex-direction: column; gap: 10px; max-width: 500px; }
+.dor-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: rgba(239,68,68,0.05);
+  border: 1px solid rgba(239,68,68,0.15);
+  border-radius: 12px;
+  padding: 14px;
+}
+.dor-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.dor-text { font-size: 0.88rem; line-height: 1.6; color: var(--text2); }
+.dor-text strong { color: var(--text); display: block; margin-bottom: 2px; font-size: 0.9rem; }
+
+/* ── FEATURES ── */
+.features-section {
+  padding: 60px 20px;
+  position: relative; z-index: 1;
+}
+.features-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 14px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.feature-card:hover { border-color: rgba(59,130,246,0.3); transform: translateY(-2px); }
+.feature-card.full { grid-column: 1/-1; }
+.feature-card.highlight {
+  background: rgba(59,130,246,0.06);
+  border-color: rgba(59,130,246,0.25);
+}
+.feature-icon {
+  width: 38px; height: 38px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; margin-bottom: 10px;
+}
+.fi-blue   { background: rgba(59,130,246,0.12); }
+.fi-green  { background: rgba(16,185,129,0.12); }
+.fi-yellow { background: rgba(245,158,11,0.12); }
+.fi-purple { background: rgba(139,92,246,0.12); }
+.fi-teal   { background: rgba(6,182,212,0.12); }
+.fi-red    { background: rgba(239,68,68,0.12); }
+.feature-name {
+  font-size: 0.88rem; font-weight: 700; color: var(--text);
+  margin-bottom: 4px;
+}
+.feature-desc { font-size: 0.78rem; color: var(--text2); line-height: 1.5; }
+
+/* ── PLANOS ── */
+.planos-section {
+  padding: 60px 20px;
+  position: relative; z-index: 1;
+  background: linear-gradient(180deg, transparent, rgba(16,185,129,0.02), transparent);
+}
+
+.planos-toggle {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; margin-bottom: 32px;
+}
+.toggle-label { font-size: 0.85rem; color: var(--text2); font-weight: 500; }
+.toggle-label.ativo { color: var(--text); font-weight: 700; }
+.toggle-wrapper {
+  width: 48px; height: 26px;
+  background: var(--accent);
+  border-radius: 13px;
+  position: relative; cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 20px; height: 20px;
+  background: #fff; border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle-wrapper.mensal .toggle-knob { transform: translateX(0); }
+.toggle-wrapper.anual  .toggle-knob { transform: translateX(22px); }
+.economia-badge {
+  background: rgba(16,185,129,0.15);
+  border: 1px solid rgba(16,185,129,0.3);
+  border-radius: 20px; padding: 3px 10px;
+  font-size: 0.7rem; font-weight: 700; color: var(--green);
+}
+
+.planos-grid {
+  display: flex; flex-direction: column; gap: 14px;
+  max-width: 440px; margin: 0 auto;
+}
+
+.plano-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px 20px;
+  position: relative;
+  transition: transform 0.2s;
+}
+.plano-card:hover { transform: translateY(-3px); }
+.plano-card.destaque {
+  background: linear-gradient(145deg, rgba(59,130,246,0.08), rgba(16,185,129,0.05));
+  border-color: rgba(59,130,246,0.35);
+  box-shadow: 0 0 40px rgba(59,130,246,0.1);
+}
+
+.plano-tag {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, var(--accent), var(--green));
+  color: #fff; font-size: 0.7rem; font-weight: 800;
+  padding: 4px 14px; border-radius: 20px;
+  white-space: nowrap; letter-spacing: 0.04em;
+}
+
+.plano-nome {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem; font-weight: 800;
+  margin-bottom: 4px;
+}
+.plano-desc { font-size: 0.78rem; color: var(--text2); margin-bottom: 16px; }
+
+.plano-preco {
+  display: flex; align-items: baseline; gap: 4px;
+  margin-bottom: 6px;
+}
+.plano-cifrao { font-size: 0.9rem; color: var(--text2); font-weight: 600; }
+.plano-valor {
+  font-family: 'Syne', sans-serif;
+  font-size: 2.6rem; font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.plano-periodo { font-size: 0.8rem; color: var(--text2); }
+
+.plano-economia {
+  font-size: 0.75rem; color: var(--green); font-weight: 600;
+  margin-bottom: 18px;
+}
+
+.plano-itens {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-bottom: 20px;
+}
+.plano-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 0.82rem; color: var(--text2);
+}
+.plano-item::before {
+  content: '✓';
+  color: var(--green); font-weight: 700;
+  font-size: 0.85rem; flex-shrink: 0; margin-top: 1px;
+}
+
+.btn-plano {
+  width: 100%; padding: 13px;
+  border-radius: 10px; border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem; font-weight: 700;
+  cursor: pointer; text-decoration: none;
+  display: block; text-align: center;
+  transition: all 0.2s;
+}
+.btn-plano.principal {
+  background: var(--accent); color: #fff;
+  box-shadow: 0 0 20px rgba(59,130,246,0.3);
+}
+.btn-plano.principal:hover { background: #2563eb; box-shadow: 0 0 30px rgba(59,130,246,0.4); }
+.btn-plano.secundario {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+}
+.btn-plano.secundario:hover { border-color: var(--accent); color: var(--text); }
+
+.plano-garantia {
+  text-align: center; font-size: 0.72rem;
+  color: var(--text2); margin-top: 10px;
+}
+
+/* ── FREE TRIAL NOTE ── */
+.trial-note {
+  text-align: center;
+  background: var(--surface);
+  border: 1px dashed rgba(59,130,246,0.3);
+  border-radius: 12px;
+  padding: 14px;
+  max-width: 440px; margin: 0 auto 40px;
+  font-size: 0.82rem; color: var(--text2); line-height: 1.6;
+}
+.trial-note strong { color: var(--accent2); }
+
+/* ── DEPOIMENTOS (placeholder) ── */
+.depoimentos-section {
+  padding: 60px 20px;
+  position: relative; z-index: 1;
+}
+.depo-placeholder {
+  max-width: 500px; margin: 0 auto;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  padding: 40px 24px;
+  text-align: center;
+}
+.depo-placeholder p {
+  font-size: 0.88rem; color: var(--text2); line-height: 1.7;
+}
+.depo-placeholder .depo-icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+/* ── CTA FINAL ── */
+.cta-section {
+  padding: 60px 20px 80px;
+  position: relative; z-index: 1;
+  text-align: center;
+}
+.cta-box {
+  max-width: 500px; margin: 0 auto;
+  background: linear-gradient(145deg, rgba(59,130,246,0.08), rgba(16,185,129,0.05));
+  border: 1px solid rgba(59,130,246,0.25);
+  border-radius: 24px;
+  padding: 40px 24px;
+  position: relative; overflow: hidden;
+}
+.cta-box::before {
+  content:'';
+  position:absolute; top:-80px; left:50%; transform:translateX(-50%);
+  width:300px; height:300px;
+  background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+  pointer-events:none;
+}
+.cta-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  font-weight: 900; letter-spacing: -0.03em;
+  margin-bottom: 12px; position: relative;
+}
+.cta-title span { color: var(--green); }
+.cta-sub {
+  font-size: 0.88rem; color: var(--text2);
+  line-height: 1.7; margin-bottom: 24px; position: relative;
+}
+.btn-cta-final {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 15px 28px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem; font-weight: 700;
+  cursor: pointer; text-decoration: none;
+  transition: all 0.2s;
+  box-shadow: 0 0 30px rgba(59,130,246,0.35);
+  position: relative;
+}
+.btn-cta-final:hover { background:#2563eb; transform:translateY(-2px); }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 24px 20px;
+  text-align: center;
+  font-size: 0.75rem; color: var(--text2);
+  position: relative; z-index: 1;
+}
+footer a { color: var(--accent2); text-decoration: none; }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(24px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.reveal {
+  opacity: 0; transform: translateY(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.visible { opacity:1; transform:translateY(0); }
+
+/* ── RESPONSIVE ── */
+@media (min-width: 480px) {
+  .hero-btns { flex-direction: row; }
+  .btn-primary { width: auto; flex: 1; }
+}
+</style>
+</head>
+<body>
+
+<!-- URGENCY BAR -->
+<div class="urgency-bar">
+  🔥 ACESSO ANTECIPADO — Preço de beta por tempo limitado
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-icon">📦</div>
+    LupiAI
+  </div>
+  <a href="https://lupi-t35c.onrender.com/" class="nav-cta" target="_blank">Testar grátis →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">✦ Gestão de estoque com inteligência artificial</div>
+
+  <h1 class="hero-title">
+    Pare de perder dinheiro<br>
+    <span>com estoque descontrolado</span>
+  </h1>
+
+  <p class="hero-sub">
+    O LupiAI monitora seu estoque, <strong>alerta quando um produto vai acabar</strong>, identifica o que parou de vender e ainda gera planilhas automáticas — sem você precisar fazer nada.
+  </p>
+
+  <div class="hero-btns">
+    <a href="https://lupi-t35c.onrender.com/" class="btn-primary" target="_blank">
+      🚀 Começar grátis agora
+    </a>
+  </div>
+
+  <div style="width:100%;max-width:360px;margin:0 auto;">
+    <div class="vagas-bar"><div class="vagas-fill"></div></div>
+    <div class="vagas-label">73% das vagas beta preenchidas</div>
+  </div>
+</section>
+
+<!-- VIDEO -->
+<section class="video-section reveal">
+  <a class="video-wrapper" href="https://youtu.be/2dK7ZloyrDw?si=KGDLuZpTLVy_Gc2D" target="_blank" rel="noopener">
+    <img
+      class="video-thumb"
+      src="https://img.youtube.com/vi/2dK7ZloyrDw/maxresdefault.jpg"
+      alt="Demonstração do LupiAI"
+      onerror="this.src='https://img.youtube.com/vi/2dK7ZloyrDw/hqdefault.jpg'"
+    >
+    <div class="video-overlay">
+      <div class="play-btn">
+        <svg viewBox="0 0 24 24" fill="#1a1a2e">
+          <polygon points="5,3 19,12 5,21"/>
+        </svg>
+      </div>
+    </div>
+    <div class="video-label">▶ Ver demonstração completa</div>
+  </a>
+</section>
+
+<!-- NUMBERS -->
+<section class="numbers-section reveal">
+  <div class="numbers-grid">
+    <div class="number-card">
+      <span class="number-val">30+</span>
+      <span class="number-label">usos grátis pra testar</span>
+    </div>
+    <div class="number-card">
+      <span class="number-val">24/7</span>
+      <span class="number-label">monitoramento automático</span>
+    </div>
+    <div class="number-card">
+      <span class="number-val">IA</span>
+      <span class="number-label">análise em linguagem natural</span>
+    </div>
+  </div>
+</section>
+
+<!-- DOR -->
+<section class="dor-section reveal">
+  <div style="max-width:500px;margin:0 auto;">
+    <div class="section-badge">O problema</div>
+    <h2 class="section-title">Quantas vezes isso<br><span>já te custou dinheiro?</span></h2>
+    <p class="section-sub">Todo lojista pequeno passa por isso. O problema não é falta de esforço — é falta de controle.</p>
+
+    <div class="dor-list">
+      <div class="dor-item">
+        <div class="dor-icon">📉</div>
+        <div class="dor-text">
+          <strong>Produto acabou sem você perceber</strong>
+          Cliente quis comprar, não tinha. Venda perdida, cliente irritado.
+        </div>
+      </div>
+      <div class="dor-item">
+        <div class="dor-icon">📦</div>
+        <div class="dor-text">
+          <strong>Dinheiro parado em estoque morto</strong>
+          Produto que não vende há meses ocupando espaço e capital.
+        </div>
+      </div>
+      <div class="dor-item">
+        <div class="dor-icon">📊</div>
+        <div class="dor-text">
+          <strong>Planilha desatualizada ou inexistente</strong>
+          Você sabe de cabeça — até esquecer. E quando esquece, prejuízo.
+        </div>
+      </div>
+      <div class="dor-item">
+        <div class="dor-icon">🚚</div>
+        <div class="dor-text">
+          <strong>Fornecedor sumiu e você não sabia o que fazer</strong>
+          Sem plano B, sem visibilidade, sem controle.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section reveal">
+  <div style="max-width:600px;margin:0 auto;text-align:center;margin-bottom:32px;">
+    <div class="section-badge">Ferramentas</div>
+    <h2 class="section-title">Tudo que você precisa<br><span>num só lugar</span></h2>
+    <p class="section-sub" style="margin:0 auto;">Além da IA que conversa com você, tem um conjunto completo de ferramentas pra não perder nenhum centavo.</p>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card full highlight">
+      <div class="feature-icon fi-blue">🤖</div>
+      <div class="feature-name">Assistente de IA</div>
+      <div class="feature-desc">Descreva o problema em português mesmo. A IA analisa, alerta e propõe ações — você só aprova.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-red">🔴</div>
+      <div class="feature-name">Alerta de Estoque Baixo</div>
+      <div class="feature-desc">Notificação automática quando um produto está prestes a acabar.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-green">📊</div>
+      <div class="feature-name">Planilha Automática</div>
+      <div class="feature-desc">Gera Excel completo com um clique. Sem digitar nada.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-yellow">💵</div>
+      <div class="feature-name">Fluxo de Caixa</div>
+      <div class="feature-desc">Controle entradas e saídas com categorias e resumo mensal.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-teal">🛒</div>
+      <div class="feature-name">Registro de Vendas</div>
+      <div class="feature-desc">Registre vendas em segundos e o estoque atualiza sozinho.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon fi-purple">👥</div>
+      <div class="feature-name">Contatos + WhatsApp</div>
+      <div class="feature-desc">Envie mensagens automáticas pra fornecedores direto pelo app.</div>
+    </div>
+  </div>
+</section>
+
+<!-- PLANOS -->
+<section class="planos-section reveal" id="planos">
+  <div style="max-width:440px;margin:0 auto;text-align:center;margin-bottom:28px;">
+    <div class="section-badge">Planos</div>
+    <h2 class="section-title">Simples e sem<br><span>pegadinha</span></h2>
+    <p class="section-sub" style="margin:0 auto 20px;">Comece grátis, assine só quando quiser continuar.</p>
+  </div>
+
+  <div class="trial-note">
+    🎁 <strong>30 usos completamente grátis</strong> — sem cartão, sem compromisso. Só assina se gostar.
+  </div>
+
+  <!-- Toggle mensal/anual -->
+  <div class="planos-toggle">
+    <span class="toggle-label ativo" id="lbl-mensal">Mensal</span>
+    <div class="toggle-wrapper mensal" id="planos-toggle" onclick="togglePlanos()">
+      <div class="toggle-knob"></div>
+    </div>
+    <span class="toggle-label" id="lbl-anual">Anual</span>
+    <span class="economia-badge" id="eco-badge" style="display:none;">Economize R$19,89/mês</span>
+  </div>
+
+  <div class="planos-grid">
+
+    <!-- MENSAL -->
+    <div class="plano-card destaque" id="card-mensal">
+      <div class="plano-tag">⚡ MAIS ESCOLHIDO</div>
+      <div class="plano-nome">Plano Mensal</div>
+      <div class="plano-desc">Flexibilidade total, cancele quando quiser.</div>
+      <div class="plano-preco">
+        <span class="plano-cifrao">R$</span>
+        <span class="plano-valor">59</span>
+        <span style="font-size:1.2rem;font-weight:700;color:var(--text2)">,99</span>
+        <span class="plano-periodo">/mês</span>
+      </div>
+      <div class="plano-itens">
+        <div class="plano-item">IA ilimitada pra análise de estoque</div>
+        <div class="plano-item">Alertas automáticos de estoque baixo</div>
+        <div class="plano-item">Geração de planilha Excel automática</div>
+        <div class="plano-item">Fluxo de caixa completo</div>
+        <div class="plano-item">Envio de mensagens via WhatsApp</div>
+        <div class="plano-item">Dados sincronizados em todos dispositivos</div>
+      </div>
+      <a href="https://lupi-t35c.onrender.com/" class="btn-plano principal" target="_blank">Começar agora →</a>
+      <div class="plano-garantia">🔒 Cancele quando quiser</div>
+    </div>
+
+    <!-- ANUAL (oculto por padrão) -->
+    <div class="plano-card destaque" id="card-anual" style="display:none;">
+      <div class="plano-tag">🏆 MELHOR CUSTO-BENEFÍCIO</div>
+      <div class="plano-nome">Plano Anual</div>
+      <div class="plano-desc">Pague uma vez, use o ano todo sem preocupação.</div>
+      <div class="plano-preco">
+        <span class="plano-cifrao">R$</span>
+        <span class="plano-valor">699</span>
+        <span style="font-size:1.2rem;font-weight:700;color:var(--text2)">,99</span>
+        <span class="plano-periodo">/ano</span>
+      </div>
+      <div class="plano-economia">✦ Equivale a R$58,33/mês — você economiza R$19,89/mês</div>
+      <div class="plano-itens">
+        <div class="plano-item">Tudo do plano mensal</div>
+        <div class="plano-item">Economia de quase R$20/mês</div>
+        <div class="plano-item">Prioridade no suporte</div>
+        <div class="plano-item">Acesso antecipado a novas funções</div>
+      </div>
+      <a href="https://lupi-t35c.onrender.com/" class="btn-plano principal" target="_blank">Garantir plano anual →</a>
+      <div class="plano-garantia">🔒 Pagamento único, acesso por 12 meses</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- DEPOIMENTOS PLACEHOLDER -->
+<section class="depoimentos-section reveal">
+  <div style="max-width:500px;margin:0 auto;text-align:center;margin-bottom:28px;">
+    <div class="section-badge">Depoimentos</div>
+    <h2 class="section-title">O que os lojistas<br><span>estão dizendo</span></h2>
+  </div>
+  <div class="depo-placeholder">
+    <div class="depo-icon">🏪</div>
+    <p>Os relatos dos primeiros beta testers chegam em breve aqui.<br><br>
+    <strong style="color:var(--accent2)">Seja um dos primeiros</strong> — acesse o app gratuitamente agora e faça parte do grupo de beta testers que vai moldar o futuro do LupiAI.</p>
+    <br>
+    <a href="https://lupi-t35c.onrender.com/" class="btn-plano principal" style="display:inline-block;width:auto;padding:12px 24px;" target="_blank">Quero ser beta tester →</a>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section reveal">
+  <div class="cta-box">
+    <h2 class="cta-title">Seu estoque sob controle<br><span>a partir de hoje</span></h2>
+    <p class="cta-sub">30 usos grátis. Sem cartão. Sem complicação.<br>Você só paga se quiser continuar.</p>
+    <a href="https://lupi-t35c.onrender.com/" class="btn-cta-final" target="_blank">
+      🚀 Começar grátis agora
+    </a>
+    <p style="font-size:0.72rem;color:var(--text2);margin-top:14px;">Já usado por lojistas em todo o Brasil 🇧🇷</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p style="margin-bottom:6px;">© 2025 LupiAI · Todos os direitos reservados</p>
+  <p><a href="https://lupi-t35c.onrender.com/politica.html">Política de Privacidade</a></p>
+</footer>
+
+<script>
+// Reveal on scroll
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('visible'), i * 80);
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+reveals.forEach(r => observer.observe(r));
+
+// Toggle mensal/anual
+let isAnual = false;
+function togglePlanos() {
+  isAnual = !isAnual;
+  const toggle = document.getElementById('planos-toggle');
+  const lblMensal = document.getElementById('lbl-mensal');
+  const lblAnual  = document.getElementById('lbl-anual');
+  const ecoBadge  = document.getElementById('eco-badge');
+  const cardMensal = document.getElementById('card-mensal');
+  const cardAnual  = document.getElementById('card-anual');
+
+  if (isAnual) {
+    toggle.classList.replace('mensal','anual');
+    lblMensal.classList.remove('ativo');
+    lblAnual.classList.add('ativo');
+    ecoBadge.style.display = 'inline-block';
+    cardMensal.style.display = 'none';
+    cardAnual.style.display  = 'block';
+  } else {
+    toggle.classList.replace('anual','mensal');
+    lblMensal.classList.add('ativo');
+    lblAnual.classList.remove('ativo');
+    ecoBadge.style.display = 'none';
+    cardMensal.style.display = 'block';
+    cardAnual.style.display  = 'none';
+  }
+}
+</script>
+</body>
+</html>
